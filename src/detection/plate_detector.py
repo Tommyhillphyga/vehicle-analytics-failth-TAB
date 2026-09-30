@@ -2,7 +2,7 @@ from typing import Any
 
 
 class PlateDetector:
-    def __init__(self, model_path: str, confidence: float = 0.45):
+    def __init__(self, model_path: str, confidence: float = 0.5):
         try:
             from ultralytics import YOLO
         except ImportError as error:
