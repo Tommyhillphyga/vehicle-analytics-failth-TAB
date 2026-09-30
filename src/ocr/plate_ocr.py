@@ -37,5 +37,6 @@ class PlateOCR:
         for _box, text, score in self.engine.readtext(image):
             confidence = float(score)
             normalized = str(text).upper()
+            
             candidates.append(OCRResult(normalized, confidence))
         return max(candidates, key=lambda item: item.confidence, default=None)
