@@ -43,6 +43,17 @@ uploaded = st.file_uploader("Upload vehicle video", type=["mp4", "avi", "mov", "
 process = st.button("Process video", type="primary", disabled=uploaded is None)
 st.subheader("Live processing")
 frame_slot = st.empty()
+previous_result = st.session_state.get("last_result")
+previous_counts = previous_result.get("counts", {}) if previous_result else {}
+metrics = st.columns(4)
+total_metric = metrics[0].empty()
+car_metric = metrics[1].empty()
+bus_metric = metrics[2].empty()
+truck_metric = metrics[3].empty()
+total_metric.metric("Total vehicles", len(previous_result["tracks"]) if previous_result else 0)
+car_metric.metric("Cars", previous_counts.get("car", 0))
+bus_metric.metric("Buses", previous_counts.get("bus", 0))
+truck_metric.metric("Trucks", previous_counts.get("truck", 0))
 
 if process and uploaded:
     video_path = Path(settings.video_dir) / Path(uploaded.name).name
@@ -55,6 +66,11 @@ if process and uploaded:
 
         def render_frame(frame, state):
             frame_slot.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), width="content")
+            counts = state["counts"]
+            total_metric.metric("Total vehicles", state["total_vehicles"])
+            car_metric.metric("Cars", counts.get("car", 0))
+            bus_metric.metric("Buses", counts.get("bus", 0))
+            truck_metric.metric("Trucks", counts.get("truck", 0))
             total = state["total_frames"]
             if total:
                 progress.progress(min(1.0, (state["frame"] + 1) / total), text=f"Processing frame {state['frame'] + 1} of {total}")
@@ -67,18 +83,6 @@ if process and uploaded:
         st.error(f"Processing failed: {error}")
     finally:
         frame_slot.empty()
-
-result = st.session_state.get("last_result")
-entries = database.all_entries()
-# show_sidebar(entries)
-
-total = len(entries)
-counts = result.get("counts", {}) if result else {}
-metrics = st.columns(4)
-metrics[0].metric("Total vehicles", total)
-metrics[1].metric("Cars", counts.get("car", 0))
-metrics[2].metric("Buses", counts.get("bus", 0))
-metrics[3].metric("Trucks", counts.get("truck", 0))
 
 st.subheader("Search by plate")
 query = st.text_input("License plate contains", placeholder="ABC123")
