@@ -89,7 +89,15 @@ class VideoProcessor:
 
                 annotated = annotate_frame(frame, vehicles, plate_detections)
                 if on_frame:
-                    on_frame(annotated, {"frame": current_frame, "total_frames": total_frames})
+                    on_frame(
+                        annotated,
+                        {
+                            "frame": current_frame,
+                            "total_frames": total_frames,
+                            "total_vehicles": len(tracker.tracks),
+                            "counts": tracker.counts_by_type(),
+                        },
+                    )
         finally:
             capture.release()
         return {
