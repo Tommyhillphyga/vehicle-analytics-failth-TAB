@@ -15,7 +15,7 @@ class OCRResult:
 
 
 class PlateOCR:
-    def __init__(self, minimum_confidence: float = 0.5, language: str = "en"):
+    def __init__(self, minimum_confidence: float = 0.3, language: str = "en"):
         try:
             import easyocr
         except ImportError as error:
@@ -25,9 +25,18 @@ class PlateOCR:
 
     @staticmethod
     def preprocess(plate_image: Any) -> Any:
-        resized = cv2.resize(plate_image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-        gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-        return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        h, w,_ = plate_image.shape
+        y_start, y_end = int(h * 0.15), int(h * 0.90)
+        x_start, x_end = int(w * 0.05), int(w * 0.95)
+        cropped = plate_image[y_start:y_end, x_start:x_end]
+
+        # resized = cv2.resize(plate_image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+        cropped_gray = cv2.cvtColor(plate_image, cv2.COLOR_BGR2GRAY)
+        # Apply CLAHE to enhance local contrast
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        cropped_enhanced = clahe.apply(cropped_gray)
+      
+        return cropped_enhanced
 
     def read(self, plate_image: Any) -> OCRResult | None:
         if plate_image is None or getattr(plate_image, "size", 0) == 0:
@@ -35,8 +44,10 @@ class PlateOCR:
         image = self.preprocess(plate_image)
         candidates = []
         for _box, text, score in self.engine.readtext(image):
-            confidence = float(score)
+            confidence = float(f"{score:.4f}")
+            if len(str(text)) < 9:  # Adjust the minimum length as needed
+                continue
             normalized = str(text).upper()
-            
+            print(f"text:{normalized} length: {len(normalized)}, confidence: {confidence}")
             candidates.append(OCRResult(normalized, confidence))
         return max(candidates, key=lambda item: item.confidence, default=None)
